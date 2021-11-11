@@ -1,1 +1,1 @@
-# Projekt---Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom
+# Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom
