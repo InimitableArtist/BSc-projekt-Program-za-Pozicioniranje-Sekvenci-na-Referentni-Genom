@@ -1,9 +1,0 @@
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/CMakeFiles/rebuild_cache.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/CMakeFiles/mapper.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/CMakeFiles/edit_cache.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/CMakeFiles/rebuild_cache.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/CMakeFiles/edit_cache.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/CMakeFiles/alignment.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/CMakeFiles/minimizers.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/bioparser/CMakeFiles/rebuild_cache.dir
-/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/src/bioparser/CMakeFiles/edit_cache.dir
