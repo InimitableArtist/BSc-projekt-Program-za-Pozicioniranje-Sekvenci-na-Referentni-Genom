@@ -1,0 +1,2 @@
+/usr/bin/ar qc libalignment.a  CMakeFiles/alignment.dir/alignment.cpp.o
+/usr/bin/ranlib libalignment.a

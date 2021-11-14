@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/mapper.dir/mapper.cpp.o  -o mapper src/libalignment.a src/libminimizers.a /usr/lib/x86_64-linux-gnu/libz.so 

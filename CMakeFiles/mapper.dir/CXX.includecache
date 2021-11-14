@@ -1,0 +1,14 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pongo_manijak/Desktop/Projekt R/BSc-projekt-Program-za-Pozicioniranje-Sekvenci-na-Referentni-Genom/sekvence_mapper/mapper.cpp
+iostream
+-
+getopt.h
+-
+
