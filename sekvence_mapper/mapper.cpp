@@ -11,7 +11,7 @@ void display_help() {
 
 int main(int argc, char* argv[]) {
     int option;
-    const char* optstring = "h:v";
+    const char* optstring = ":hv";
 
     while((option = getopt(argc, argv, optstring)) != -1) {
         switch (option)
