@@ -12,7 +12,6 @@ void display_help() {
 int main(int argc, char* argv[]) {
     int option;
     const char* optstring = ":hv";
-
     while((option = getopt(argc, argv, optstring)) != -1) {
         switch (option)
         {
@@ -27,8 +26,14 @@ int main(int argc, char* argv[]) {
 
         
         default:
-            return 1;
+            exit(1);
         }
+        
+    }
+
+    if (optind < argc) {
+        std::cout << argv[optind++] << "\n";
+        std::cout << argv[optind] << "\n";
     }
     
     
