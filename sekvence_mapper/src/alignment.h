@@ -1,11 +1,11 @@
 #include <iostream>
 
 enum AlignmentType {GLOBAL, LOCAL, SEMI_GLOBAL};
-enum AlignmentTrack {STOP, LEFT, UP, DIAGONAL};
+enum ParentTrack {NONE, LEFT, UP, DIAGONAL};
 
 struct Cell {
     int cost;
-    int parent;
+    ParentTrack parent;
 };
 
 
