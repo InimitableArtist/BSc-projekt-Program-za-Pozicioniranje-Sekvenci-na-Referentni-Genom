@@ -35,10 +35,10 @@ int Align(const char* query, unsigned int query_len,
     //Table coords of the result
     int res_row = 0;
     int res_column = 0;
+    int match_cost = 0;
 
     //Smith-Waterman
     if (type == LOCAL) {
-        int match_cost = 0;
         int MAX = 0;
         int left, up;
         V[0][0].cost = 0;
@@ -116,6 +116,42 @@ int Align(const char* query, unsigned int query_len,
     }
 
     else if (type == SEMI_GLOBAL) {
+        V[0][0].cost = 0;
+        V[0][0].parent = NONE;
+        int MAX = INT32_MIN;
+        int left, up;
+
+        for (int i = 1; i <= query_len; i++) {
+            V[i][0].cost = 0;
+            V[i][0].parent = NONE;
+        }
+        for (int j = 1; j <= target_len; j++) {
+            V[0][j].cost = 0;
+            V[0][j].parent = NONE;
+        }
+
+        for (int i = 1; i <= query_len; i++) {
+            for (int j = 1; j <= target_len; j++) {
+                if(query[i - 1] == target[j - 1]) {
+                    match_cost = V[i - 1][j - 1].cost + match; 
+                } else {
+                    match_cost = V[i - 1][j - 1].cost + mismatch;
+                }
+                left = V[i][j - 1].cost + gap;
+                up = V[i - 1][j].cost + gap;
+
+                int values[4] = {match_cost, left, up};
+                std::pair<int, ParentTrack> res = find_max(values, 3);
+                V[i][j].cost = res.first;
+                V[i][j].parent = res.second;
+
+                if (V[i][j].cost > MAX && (i == query_len) || (j == target_len)) {
+                    MAX = V[i][j].cost;
+                    res_row = i;
+                    res_column = j;
+                }
+            }
+        }
 
     }
 
