@@ -1,7 +1,7 @@
 #include <iostream>
 
 enum AlignmentType {GLOBAL, LOCAL, SEMI_GLOBAL};
-enum ParentTrack {NONE, LEFT, UP, DIAGONAL};
+enum ParentTrack {NONE, INSERTION, DELETION, MATCH};
 
 struct Cell {
     int cost;

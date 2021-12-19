@@ -1,6 +1,9 @@
 #include <iostream>
 #include "alignment.h"
 #include <algorithm>
+#include <string>
+
+using namespace std;
 
 std::pair<int, ParentTrack> find_max(int values[], int length) {
     int max = values[0];
@@ -12,11 +15,54 @@ std::pair<int, ParentTrack> find_max(int values[], int length) {
             index = i;
         }
     }
-    if (index == 0) track = DIAGONAL;
-    else if (index == 1) track = LEFT;
-    else if (index == 2) track = UP;
+    if (index == 0) track = MATCH;
+    else if (index == 1) track = INSERTION;
+    else if (index == 2) track = DELETION;
     else track = NONE;
     return std::make_pair(max, track);
+}
+
+int target_begin(int res_row,int res_column,struct Cell **V){
+    ParentTrack now = V[res_row][res_column].parent;
+    while(now != NONE){
+        if(now == MATCH) {
+            res_row--;
+            res_column--;
+        }
+        else if(now == INSERTION) res_row--;    
+        else res_column--;
+        
+        now = V[res_row][res_column].parent;
+    }
+    return res_row;
+}
+
+std::string cigar(int res_row,int res_column, Cell **V){
+    string str = "";
+    ParentTrack now = V[res_row][res_column].parent;
+    ParentTrack prev = NONE;
+    int dist=1;
+    char type = std::to_string(now)[0];
+
+    while(now != NONE){
+        if(now == MATCH) {
+            res_row--;
+            res_column--;
+        }
+        else if(now == INSERTION) res_row--;    
+        else res_column--;
+        prev = now;
+        now = V[res_row][res_column].parent;
+        
+        if(prev == now) dist++;
+        else{
+            str += std::to_string(dist);
+            str += type;
+            dist = 1;
+            type = std::to_string(now)[0];
+        }
+    }
+    return str;
 }
 
 int Align(const char* query, unsigned int query_len,
@@ -112,7 +158,9 @@ int Align(const char* query, unsigned int query_len,
                 V[i][j].parent = res.second;
             }
         }
-        align = V[query_len][target_len].cost;
+        res_row = query_len;
+        res_column = target_len;
+        align = V[res_row][res_column].cost;
     }
 
     else if (type == SEMI_GLOBAL) {
