@@ -5,7 +5,7 @@
 
 using namespace std;
 
-std::pair<int, ParentTrack> find_max(int values[], int length) {
+std::pair<int, ParentTrack> find_max(int values[], int length, bool mtch) {
     int max = values[0];
     int index = 0;
     ParentTrack track;
@@ -15,51 +15,59 @@ std::pair<int, ParentTrack> find_max(int values[], int length) {
             index = i;
         }
     }
-    if (index == 0) track = MATCH;
+    if (index == 0) {
+        if (mtch) {
+            track = MATCH;
+        }
+        else {
+            track = MISMATCH;
+        }
+    }
     else if (index == 1) track = INSERTION;
     else if (index == 2) track = DELETION;
     else track = NONE;
     return std::make_pair(max, track);
 }
 
-int target_begin(int res_row,int res_column,struct Cell **V){
+std::pair<int, int> get_target_begin(int res_row,int res_column,struct Cell **V){
     ParentTrack now = V[res_row][res_column].parent;
     while(now != NONE){
-        if(now == MATCH) {
+        if(now == MATCH || now == MISMATCH) {
             res_row--;
             res_column--;
         }
-        else if(now == INSERTION) res_row--;    
-        else res_column--;
+        else if(now == INSERTION) res_column--;    
+        else res_row--;
         
         now = V[res_row][res_column].parent;
     }
-    return res_row;
+    return std::make_pair(res_row, res_column);
 }
 
-std::string cigar(int res_row,int res_column, Cell **V){
+std::string get_cigar(int res_row,int res_column, Cell **V){
     string str = "";
     ParentTrack now = V[res_row][res_column].parent;
     ParentTrack prev = NONE;
     int dist=1;
-    char type = std::to_string(now)[0];
 
     while(now != NONE){
-        if(now == MATCH) {
+        if(now == MATCH || now == MISMATCH) {
             res_row--;
             res_column--;
         }
-        else if(now == INSERTION) res_row--;    
-        else res_column--;
+        else if(now == INSERTION) res_column--;    
+        else res_row--;
         prev = now;
         now = V[res_row][res_column].parent;
         
         if(prev == now) dist++;
         else{
             str += std::to_string(dist);
-            str += type;
+            if (prev == MATCH) str += "M";
+            else if (prev == MISMATCH) str += "X";
+            else if (prev == INSERTION) str += "I";
+            else str += "D";
             dist = 1;
-            type = std::to_string(now)[0];
         }
     }
     return str;
@@ -75,7 +83,10 @@ int Align(const char* query, unsigned int query_len,
     unsigned int* target_begin = nullptr) {   
     
     //Dynamic programming table
-    Cell V[query_len + 1][target_len + 1];
+    Cell **V = new Cell*[query_len + 1];
+    for (unsigned int i = 0; i <= query_len; i++) {
+        V[i] = new Cell[target_len + 1];
+    }
     int align = 0;
 
     //Table coords of the result
@@ -100,8 +111,10 @@ int Align(const char* query, unsigned int query_len,
         }
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 if (query[i - 1] == target[j - 1]) {
                     match_cost = V[i - 1][j - 1].cost + match;
+                    mtch = true;
                 } 
                 else match_cost = V[i - 1][j - 1].cost + mismatch;
 
@@ -109,7 +122,7 @@ int Align(const char* query, unsigned int query_len,
                 up = V[i - 1][j].cost + gap;
 
                 int values[4] = {match_cost, left, up, 0};
-                std::pair<int, ParentTrack> res = find_max(values, 4);
+                std::pair<int, ParentTrack> res = find_max(values, 4, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
 
@@ -139,9 +152,11 @@ int Align(const char* query, unsigned int query_len,
         }
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 
                 if (query[i] == target[j]) {
                     poravnanje = match;
+                    mtch = true;
                 }
                 else{
                     poravnanje = mismatch;
@@ -152,7 +167,7 @@ int Align(const char* query, unsigned int query_len,
                 int var3 = V[i][j-1].cost + gap; //D
 
                 int vars[3] = {var1, var2, var3};
-                std::pair<int, ParentTrack> res = find_max(vars, 3);
+                std::pair<int, ParentTrack> res = find_max(vars, 3, mtch);
                 
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
@@ -180,16 +195,18 @@ int Align(const char* query, unsigned int query_len,
 
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 if(query[i - 1] == target[j - 1]) {
                     match_cost = V[i - 1][j - 1].cost + match; 
+                    mtch = true;
                 } else {
                     match_cost = V[i - 1][j - 1].cost + mismatch;
                 }
                 left = V[i][j - 1].cost + gap;
                 up = V[i - 1][j].cost + gap;
 
-                int values[4] = {match_cost, left, up};
-                std::pair<int, ParentTrack> res = find_max(values, 3);
+                int values[4] = {match_cost, left, up}; 
+                std::pair<int, ParentTrack> res = find_max(values, 3, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
 
@@ -202,6 +219,20 @@ int Align(const char* query, unsigned int query_len,
         }
 
     }
+
+    std::pair<int, int> coords = get_target_begin(res_row, res_column, V);
+    if (target_begin != nullptr) {
+        if (type == GLOBAL) {
+            *target_begin = 0;
+        }
+        else if (type == SEMI_GLOBAL) {
+            *target_begin = coords.second;
+        }
+        else {
+            *target_begin = coords.second;
+        }
+    }
+    *cigar = get_cigar(res_row, res_column, V);
 
     return align;
 }
