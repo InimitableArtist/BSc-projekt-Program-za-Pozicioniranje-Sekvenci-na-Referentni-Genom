@@ -55,18 +55,19 @@ std::string get_cigar(int res_row,int res_column, Cell **V){
             res_row--;
             res_column--;
         }
-        else if(now == INSERTION) res_column--;    
-        else res_row--;
+        else if(now == INSERTION) res_row--;    
+        else res_column--;
         prev = now;
         now = V[res_row][res_column].parent;
         
         if(prev == now) dist++;
         else{
-            str += std::to_string(dist);
-            if (prev == MATCH) str += "M";
-            else if (prev == MISMATCH) str += "X";
-            else if (prev == INSERTION) str += "I";
-            else str += "D";
+            
+            if (prev == MATCH) str.insert(0, "M");
+            else if (prev == MISMATCH) str.insert(0, "X");
+            else if (prev == INSERTION) str.insert(0, "I");
+            else str.insert(0, "D");
+            str.insert(0, std::to_string(dist));
             dist = 1;
         }
     }
@@ -154,7 +155,7 @@ int Align(const char* query, unsigned int query_len,
             for (int j = 1; j <= target_len; j++) {
                 bool mtch = false;
                 
-                if (query[i] == target[j]) {
+                if (query[i-1] == target[j-1]) {
                     poravnanje = match;
                     mtch = true;
                 }
@@ -210,14 +211,15 @@ int Align(const char* query, unsigned int query_len,
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
 
-                if (V[i][j].cost > MAX && (i == query_len) || (j == target_len)) {
+                if (V[i][j].cost > MAX && ((i == query_len) || (j == target_len))) {
                     MAX = V[i][j].cost;
                     res_row = i;
                     res_column = j;
                 }
             }
         }
-
+        
+	align = V[res_row][res_column].cost;
     }
 
     std::pair<int, int> coords = get_target_begin(res_row, res_column, V);
