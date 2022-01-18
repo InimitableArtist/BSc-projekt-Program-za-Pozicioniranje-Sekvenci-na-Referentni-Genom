@@ -1,5 +1,6 @@
 #include <iostream>
 #include <getopt.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <memory>
@@ -9,23 +10,11 @@
 
 #include "src/alignment.h"
 #include "src/minimizers.h"
-
 #include <bits/stdc++.h>
 
-/*
-    int main()
-    {
-        
-        unsigned long int sequence = 231032101233101;
-        
-        int n = countDigit(sequence);
-        
-        cout << "Za broj " << sequence << " najveći rastući niz je: " ;
-        
-        longestSubsequence(sequence,n);
-        
-    }
-*/
+
+
+
 
 int countDigit(unsigned long int n)
 {
@@ -51,10 +40,18 @@ void longestSubsequence(unsigned long int sequence, int n)
 
     unordered_map<int, int> mp;
 
+
     int dp[n];
     memset(dp, 0, sizeof(dp));
 
     int maximum = INT_MIN;
+
+
+    int dp[n];
+    memset(dp, 0, sizeof(dp));
+
+    int maximum = INT_MIN;
+
 
     int index = -1;
     for (int i = 0; i < n; i++)
@@ -82,6 +79,7 @@ void longestSubsequence(unsigned long int sequence, int n)
     for (int curr = a[index] - maximum + 1;
          curr <= a[index]; curr++)
         cout << curr << " ";
+
 }
 
 bool cigar_flag;
@@ -178,6 +176,26 @@ int main(int argc, char *argv[])
 {
     int option;
     const char *optstring = "m:g:n:a:k:w:f:t:hvc";
+=======
+}
+
+void display_version()
+{
+    std::cout << "v0.1.0"
+              << "\n";
+}
+
+void display_help()
+{
+    std::cout << "Help message"
+              << "\n";
+}
+
+int main(int argc, char *argv[])
+{
+    int option;
+    const char *optstring = ":hv";
+
     while ((option = getopt(argc, argv, optstring)) != -1)
     {
         switch (option)
