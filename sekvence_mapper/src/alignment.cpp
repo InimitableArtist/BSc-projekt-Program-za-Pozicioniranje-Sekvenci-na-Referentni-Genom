@@ -1,8 +1,11 @@
 #include <iostream>
 #include "alignment.h"
 #include <algorithm>
+#include <string>
 
-std::pair<int, ParentTrack> find_max(int values[], int length) {
+using namespace std;
+
+std::pair<int, ParentTrack> find_max(int values[], int length, bool mtch) {
     int max = values[0];
     int index = 0;
     ParentTrack track;
@@ -12,11 +15,63 @@ std::pair<int, ParentTrack> find_max(int values[], int length) {
             index = i;
         }
     }
-    if (index == 0) track = DIAGONAL;
-    else if (index == 1) track = LEFT;
-    else if (index == 2) track = UP;
+    if (index == 0) {
+        if (mtch) {
+            track = MATCH;
+        }
+        else {
+            track = MISMATCH;
+        }
+    }
+    else if (index == 1) track = INSERTION;
+    else if (index == 2) track = DELETION;
     else track = NONE;
     return std::make_pair(max, track);
+}
+
+std::pair<int, int> get_target_begin(int res_row,int res_column,struct Cell **V){
+    ParentTrack now = V[res_row][res_column].parent;
+    while(now != NONE){
+        if(now == MATCH || now == MISMATCH) {
+            res_row--;
+            res_column--;
+        }
+        else if(now == INSERTION) res_column--;    
+        else res_row--;
+        
+        now = V[res_row][res_column].parent;
+    }
+    return std::make_pair(res_row, res_column);
+}
+
+std::string get_cigar(int res_row,int res_column, Cell **V){
+    string str = "";
+    ParentTrack now = V[res_row][res_column].parent;
+    ParentTrack prev = NONE;
+    int dist=1;
+
+    while(now != NONE){
+        if(now == MATCH || now == MISMATCH) {
+            res_row--;
+            res_column--;
+        }
+        else if(now == INSERTION) res_row--;    
+        else res_column--;
+        prev = now;
+        now = V[res_row][res_column].parent;
+        
+        if(prev == now) dist++;
+        else{
+            
+            if (prev == MATCH) str.insert(0, "M");
+            else if (prev == MISMATCH) str.insert(0, "X");
+            else if (prev == INSERTION) str.insert(0, "I");
+            else str.insert(0, "D");
+            str.insert(0, std::to_string(dist));
+            dist = 1;
+        }
+    }
+    return str;
 }
 
 int Align(const char* query, unsigned int query_len,
@@ -29,7 +84,10 @@ int Align(const char* query, unsigned int query_len,
     unsigned int* target_begin = nullptr) {   
     
     //Dynamic programming table
-    Cell V[query_len + 1][target_len + 1];
+    Cell **V = new Cell*[query_len + 1];
+    for (unsigned int i = 0; i <= query_len; i++) {
+        V[i] = new Cell[target_len + 1];
+    }
     int align = 0;
 
     //Table coords of the result
@@ -54,8 +112,10 @@ int Align(const char* query, unsigned int query_len,
         }
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 if (query[i - 1] == target[j - 1]) {
                     match_cost = V[i - 1][j - 1].cost + match;
+                    mtch = true;
                 } 
                 else match_cost = V[i - 1][j - 1].cost + mismatch;
 
@@ -63,7 +123,7 @@ int Align(const char* query, unsigned int query_len,
                 up = V[i - 1][j].cost + gap;
 
                 int values[4] = {match_cost, left, up, 0};
-                std::pair<int, ParentTrack> res = find_max(values, 4);
+                std::pair<int, ParentTrack> res = find_max(values, 4, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
 
@@ -93,9 +153,11 @@ int Align(const char* query, unsigned int query_len,
         }
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 
-                if (query[i] == target[j]) {
+                if (query[i-1] == target[j-1]) {
                     poravnanje = match;
+                    mtch = true;
                 }
                 else{
                     poravnanje = mismatch;
@@ -106,13 +168,15 @@ int Align(const char* query, unsigned int query_len,
                 int var3 = V[i][j-1].cost + gap; //D
 
                 int vars[3] = {var1, var2, var3};
-                std::pair<int, ParentTrack> res = find_max(vars, 3);
+                std::pair<int, ParentTrack> res = find_max(vars, 3, mtch);
                 
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
             }
         }
-        align = V[query_len][target_len].cost;
+        res_row = query_len;
+        res_column = target_len;
+        align = V[res_row][res_column].cost;
     }
 
     else if (type == SEMI_GLOBAL) {
@@ -132,28 +196,45 @@ int Align(const char* query, unsigned int query_len,
 
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
+                bool mtch = false;
                 if(query[i - 1] == target[j - 1]) {
                     match_cost = V[i - 1][j - 1].cost + match; 
+                    mtch = true;
                 } else {
                     match_cost = V[i - 1][j - 1].cost + mismatch;
                 }
                 left = V[i][j - 1].cost + gap;
                 up = V[i - 1][j].cost + gap;
 
-                int values[4] = {match_cost, left, up};
-                std::pair<int, ParentTrack> res = find_max(values, 3);
+                int values[4] = {match_cost, left, up}; 
+                std::pair<int, ParentTrack> res = find_max(values, 3, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
 
-                if (V[i][j].cost > MAX && (i == query_len) || (j == target_len)) {
+                if (V[i][j].cost > MAX && ((i == query_len) || (j == target_len))) {
                     MAX = V[i][j].cost;
                     res_row = i;
                     res_column = j;
                 }
             }
         }
-
+        
+	align = V[res_row][res_column].cost;
     }
+
+    std::pair<int, int> coords = get_target_begin(res_row, res_column, V);
+    if (target_begin != nullptr) {
+        if (type == GLOBAL) {
+            *target_begin = 0;
+        }
+        else if (type == SEMI_GLOBAL) {
+            *target_begin = coords.second;
+        }
+        else {
+            *target_begin = coords.second;
+        }
+    }
+    *cigar = get_cigar(res_row, res_column, V);
 
     return align;
 }
