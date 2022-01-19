@@ -13,8 +13,10 @@
 #include <bits/stdc++.h>
 
 
+#include "bioparser/fasta_parser.hpp"
 
 
+using namespace std;
 
 int countDigit(unsigned long int n)
 {
@@ -47,12 +49,7 @@ void longestSubsequence(unsigned long int sequence, int n)
     int maximum = INT_MIN;
 
 
-    int dp[n];
-    memset(dp, 0, sizeof(dp));
-
-    int maximum = INT_MIN;
-
-
+    
     int index = -1;
     for (int i = 0; i < n; i++)
     {
@@ -101,7 +98,9 @@ static std::string HELP = "-h or --help for help\n"
                           "-c cigar string enabled\n"
                           "-k k-mer length\n"
                           "-w window length\n"
-                          "-f top f frequent minimizers that will not be taken in account\n";
+                          "-f top f frequent minimizers that will not be taken in account\n"
+                          "query name of the file with redings in FASTQ format\n"
+                          "target name of the reference file in FASTA format\n";
 
 class Sequence
 {
@@ -161,6 +160,8 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
     index = remove_frequent_minimizers(index, skip, min_occ);
 }
 
+
+
 void display_version()
 {
     std::cout << "v0.1.0"
@@ -169,32 +170,14 @@ void display_version()
 
 void display_help()
 {
-    std::cout << HELP << "\n";
+    std::cout << HELP
+              << "\n";
 }
 
 int main(int argc, char *argv[])
 {
     int option;
     const char *optstring = "m:g:n:a:k:w:f:t:hvc";
-=======
-}
-
-void display_version()
-{
-    std::cout << "v0.1.0"
-              << "\n";
-}
-
-void display_help()
-{
-    std::cout << "Help message"
-              << "\n";
-}
-
-int main(int argc, char *argv[])
-{
-    int option;
-    const char *optstring = ":hv";
 
     while ((option = getopt(argc, argv, optstring)) != -1)
     {
@@ -237,6 +220,8 @@ int main(int argc, char *argv[])
             break;
 
         default:
+            std::cout<<HELP;
+                     
             exit(1);
         }
     }
@@ -245,7 +230,21 @@ int main(int argc, char *argv[])
     {
         std::cout << argv[optind++] << "\n";
         std::cout << argv[optind] << "\n";
-    }
+        std::string path = argv[optind];
+        std::cout << path << "\n";
+        
 
+	
+	auto p = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(path);
+
+	// parse whole file
+	auto s = p->Parse(-1);
+	
+	//kak dohvatim elemente iz s???
+	for(auto it = s.begin(); it != s.end(); ++it) {
+    		it->names();
+ 	}
+    }
+    
     return 0;
 }
