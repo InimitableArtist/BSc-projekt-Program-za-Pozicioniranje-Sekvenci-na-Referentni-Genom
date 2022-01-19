@@ -1,9 +1,13 @@
 #include <iostream>
 #include "alignment.h"
 #include <algorithm>
+#include <initializer_list>
 #include <string>
-
+#include <math.h>
+	
 using namespace std;
+
+
 
 std::pair<int, ParentTrack> find_max(int values[], int length, bool mtch) {
     int max = values[0];
@@ -36,8 +40,8 @@ std::pair<int, int> get_target_begin(int res_row,int res_column,struct Cell **V)
             res_row--;
             res_column--;
         }
-        else if(now == INSERTION) res_column--;    
-        else res_row--;
+        else if(now == INSERTION) res_row--;    
+        else res_column--;
         
         now = V[res_row][res_column].parent;
     }
@@ -73,6 +77,8 @@ std::string get_cigar(int res_row,int res_column, Cell **V){
     }
     return str;
 }
+
+
 
 int Align(const char* query, unsigned int query_len,
     const char* target, unsigned int target_len,
@@ -122,7 +128,7 @@ int Align(const char* query, unsigned int query_len,
                 left = V[i][j - 1].cost + gap;
                 up = V[i - 1][j].cost + gap;
 
-                int values[4] = {match_cost, left, up, 0};
+                int values[4] = {match_cost, up, left, 0};
                 std::pair<int, ParentTrack> res = find_max(values, 4, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
@@ -147,9 +153,11 @@ int Align(const char* query, unsigned int query_len,
         int poravnanje = 0;
         for (int i = 1; i <= query_len; i++) {
             V[i][0].cost = V[i-1][0].cost + gap;
+            V[i][0].parent = INSERTION;
         }
         for (int j = 1; j <= target_len; j++) {
             V[0][j].cost = V[0][j-1].cost + gap;
+            V[0][j].parent = DELETION;
         }
         for (int i = 1; i <= query_len; i++) {
             for (int j = 1; j <= target_len; j++) {
@@ -206,7 +214,7 @@ int Align(const char* query, unsigned int query_len,
                 left = V[i][j - 1].cost + gap;
                 up = V[i - 1][j].cost + gap;
 
-                int values[4] = {match_cost, left, up}; 
+                int values[4] = {match_cost, up, left}; 
                 std::pair<int, ParentTrack> res = find_max(values, 3, mtch);
                 V[i][j].cost = res.first;
                 V[i][j].parent = res.second;
@@ -236,5 +244,177 @@ int Align(const char* query, unsigned int query_len,
     }
     *cigar = get_cigar(res_row, res_column, V);
 
-    return align;
+    return align;   
 }
+
+
+
+
+int *scoreNW(const char* query, unsigned int query_len,
+    const char* target, unsigned int target_len,
+    int match,
+    int mismatch,
+    int gap){
+    
+    //Dynamic programming table
+    int V[2][query_len+1];
+    V[0][0]= 0;
+    int poravnanje = 0;
+    for(int j=1;j<=query_len;j++){
+        V[0][j] = V[0][j-1] + gap;
+    }
+    for(int i=1;i<=target_len;i++){
+        V[1][0] = V[0][0] + gap;
+        
+        for (int j = 1; j <= query_len; j++) {
+                
+            if (query[j-1] == target[i-1]) {
+                poravnanje = match;
+            }
+            else{
+                poravnanje = mismatch;
+            }
+            int var1 = V[0][j-1] + poravnanje; //M
+            int var2 = V[0][j] + gap; //I
+            int var3 = V[1][j-1] + gap; //D
+
+            V[1][j] = max({var1,var2,var3});
+            //cout<<V[1][j];
+            
+        }
+        //cout<<"\n";
+        for(int j=0;j<=query_len;j++){
+            V[0][j]=V[1][j];
+        }
+    }
+    int *zadnjiRed =(int*) malloc(sizeof(int) * (query_len+1));
+    for(int j=0;j<=query_len;j++){
+        zadnjiRed[j] = V[1][j];
+        
+        
+    }
+    
+    return zadnjiRed;
+}
+
+
+int LinearnaSloz(const char* query, unsigned int query_len,
+    const char* target, unsigned int target_len,
+    int match,
+    int mismatch,
+    int gap,
+    std::string* cigar = nullptr) {
+    
+    
+    
+    if((target_len<=1) or (query_len<=1)){
+        
+        string* cigarA = new string;
+        int score =Align(query,query_len,
+        target, target_len,
+        GLOBAL,
+        match,
+        mismatch,
+        gap, 
+        cigarA);
+        
+        string str = *cigarA;
+        string str2 = *cigar;
+        
+        int i= 0;
+        int br=0;
+        while (isdigit(str[i])){
+        	br=br + (((int)(str[i])-48) * (pow(10,i)));
+        	      	
+        	i++;
+        }
+        if(!(str2.empty()) and (str[i]==(str2).back())){
+        	str = str.substr(i);
+        	
+        	int i = 2;       		
+        	int br2 =0;
+        			
+        	while (isdigit(str2[str2.length()-i])){
+        		
+        		br2=((int)(str2[str2.length()-i])-48) + br2 * pow(10,i );
+        		i++;	
+        	}
+        		
+        	
+        	str2 = str2.substr(0, str2.length()-(i-1));
+        	*cigar = str2;
+        	*cigar = *cigar + to_string(br + br2);
+        	*cigar = *cigar + str;
+        }
+        else{
+        	*cigar = *cigar + str;
+        }
+        return score;
+    }
+    
+    
+    else{
+        int half = target_len/2;
+        string queryS = query;
+        string targetS = target; 
+        
+        string tr = targetS.substr(0,half);
+        string trR = targetS.substr(half, target_len);
+        reverse(trR.begin(), trR.end());
+        
+        string qrR = queryS;
+        reverse(qrR.begin(), qrR.end());
+        
+        int *zr = scoreNW(query, query_len, tr.c_str(), half, match, mismatch, gap);
+        
+        if (target_len%2!=0){
+            half++;
+            
+        }
+  
+        int *zrR = scoreNW(qrR.c_str(),query_len, trR.c_str(), half, match, mismatch, gap);
+        
+        if (target_len%2!=0){
+            half--;    
+        }
+        
+        int mx;
+        int poz;
+        for (int i=0;i<query_len;i++){
+            if (i==0){
+                mx = *(zr) + *(zrR+(query_len));
+                
+                poz = 0;
+            }
+            else{
+                if(mx < (*(zr+i) + *(zrR+(query_len)-i))){
+                    mx = *(zr+i) + *(zrR+(query_len)-i);
+                    poz = i;
+                    
+                } 
+            }
+        }
+        free(zr);
+        free(zrR);
+        
+        string qr1 = queryS.substr(0,poz);
+        string qr2 = queryS.substr(poz, query_len-poz);
+        
+        
+        reverse(trR.begin(), trR.end());
+        
+        int d1 = LinearnaSloz(qr1.c_str(),poz, tr.c_str(), half,match, mismatch, gap, cigar);
+        
+        if (target_len%2!=0){
+            
+            half++;
+        }
+        int d2 = LinearnaSloz(qr2.c_str(),query_len-poz, trR.c_str(), half,match,mismatch,gap, cigar);
+           
+        return (d1+d2);
+    }
+    
+}	
+
+
+
