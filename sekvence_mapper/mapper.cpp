@@ -239,7 +239,6 @@ int main(int argc, char *argv[])
 
 	// parse whole file
 	auto s = p->Parse(-1);
-    cout << s;
 	
 	//kak dohvatim elemente iz s???
 	for(auto it = s.begin(); it != s.end(); ++it) {
