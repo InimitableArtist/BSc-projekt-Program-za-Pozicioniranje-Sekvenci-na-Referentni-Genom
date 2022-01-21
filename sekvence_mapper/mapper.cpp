@@ -239,11 +239,15 @@ int main(int argc, char *argv[])
 
 	// parse whole file
 	auto s = p->Parse(-1);
-	
+
+    std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> ref_index;
+    make_reference_index(s.front(), ref_index);
+
 	//kak dohvatim elemente iz s???
 	for(auto it = s.begin(); it != s.end(); ++it) {
+             
             it->get()->names;
-        
+                    
         }
     
     }
