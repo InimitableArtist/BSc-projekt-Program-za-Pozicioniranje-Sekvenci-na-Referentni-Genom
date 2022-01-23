@@ -80,8 +80,8 @@ void longestSubsequence(unsigned long int sequence, int n)
 }
 
 bool cigar_flag;
-int kmer_len = 15;
-int window_len = 5;
+int kmer_len = 10;
+int window_len = 15;
 double minimizer_freq = 0.001;
 int match_cost = 1;
 int mismatch_cost = - 1;
@@ -117,6 +117,8 @@ public:
 void make_minimizer_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
+    cout << "usao ovdje, 2\n";
+    cout << sequence->all_data.size() << "\n";
     std::vector<std::tuple<unsigned int, unsigned int, bool>> minimizers = Minimize(sequence->all_data.c_str(),
                                                                                     sequence->all_data.size(), kmer_len, window_len);
     for (auto minimizer : minimizers)
@@ -138,7 +140,9 @@ std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> rem
 void make_reference_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
+    cout << "usao ovdje" << "\n";
     make_minimizer_index(sequence, index);
+    cout << "izisao ovdje\n";
     std::vector<std::pair<unsigned int, unsigned int>> min_occ;
     min_occ.reserve(index.size());
     int num_singl = 0;
@@ -158,7 +162,10 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
     {
         skip = index_size - 1;
     }
-    index = remove_frequent_minimizers(index, skip, min_occ);
+    for (int i = 0; i < skip; i++) {
+        index.erase(min_occ[i].second);
+    }
+    //index = remove_frequent_minimizers(index, skip, min_occ);
 }
 
 
@@ -290,7 +297,7 @@ int main(int argc, char *argv[])
     }
 
     std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> reference_index;
-    //make_reference_index(reference.front(), reference_index);
+    make_reference_index(reference.front(), reference_index);
     
 
     
