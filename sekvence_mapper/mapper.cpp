@@ -83,11 +83,12 @@ bool cigar_flag;
 int kmer_len = 15;
 int window_len = 5;
 double minimizer_freq = 0.001;
-int match_cost;
-int mismatch_cost;
-int gap_cost;
+int match_cost = 1;
+int mismatch_cost = - 1;
+int gap_cost = - 1;
 int thread_num = 1;
-AlignmentType type;
+AlignmentType type = GLOBAL;
+int algorithm;
 
 static std::string HELP = "-h or --help for help\n"
                           "-v or --version for version\n"
@@ -201,7 +202,7 @@ int main(int argc, char *argv[])
             gap_cost = atoi(optarg);
             break;
         case 'a':
-            type = static_cast<AlignmentType>(atoi(optarg));
+            algorithm = atoi(optarg);
             break;
         case 'k':
             kmer_len = atoi(optarg);
@@ -228,29 +229,70 @@ int main(int argc, char *argv[])
 
     if (optind < argc)
     {
-        std::cout << argv[optind++] << "\n";
-        std::cout << argv[optind] << "\n";
-        std::string path = argv[optind];
-        std::cout << path << "\n";
+        std::string path = argv[optind];   
         
-
-	
-	auto p = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(path);
-
-	// parse whole file
-	auto s = p->Parse(-1);
-
-    std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> ref_index;
-    make_reference_index(s.front(), ref_index);
-
-	//kak dohvatim elemente iz s???
-	for(auto it = s.begin(); it != s.end(); ++it) {
-             
-            it->get()->names;
-                    
-        }
-    
     }
+	
+	auto ref = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(argv[argc - 2]);
+    auto reference = ref->Parse(-1);
+    int ref_size = (int)reference.size();
+
+    auto frag = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(argv[argc - 1]);
+    auto fragments = frag->Parse(-1);
+    int frag_size = (int)fragments.size();
+    
+    int sum = 0;
+    for (int i = 0; i < frag_size; i++) {
+        sum += fragments[i]->all_data.size();
+    } 
+    float avg_size = sum / frag_size;
+    std::vector<size_t> fragment_vector;
+    for (int i = 0; i < frag_size; i++) {
+        fragment_vector.push_back(fragments[i]->all_data.size());
+    }
+    std::sort(fragment_vector.begin(), fragment_vector.end());
+
+    
+    
+    string cigar;
+    unsigned int target_begin;
+
+    
+    
+    srand(time(NULL));
+    int query_index = rand() % (frag_size);
+    int target_index = rand() % (frag_size);
+
+    //query_index = 0;
+    //target_index = 0;
+
+    switch (algorithm)
+    {
+        case 0:
+            type = GLOBAL;
+            break;
+        case 1:
+            type = LOCAL;
+            break;
+        case 2:
+            type = SEMI_GLOBAL;
+            break;
+        default:
+            break;
+    }
+    //cout << "type: " << type << "\n";
+    int align_score = Align(fragments[query_index]->all_data.c_str(), fragments[query_index]->all_data.size(),
+                                                fragments[target_index]->all_data.c_str(),
+                                                fragments[target_index]->all_data.size(), type, match_cost, mismatch_cost, gap_cost, &cigar, &target_begin);
+    cout << "Alignment score: " << align_score << "\n";
+    if (cigar_flag) {
+        cout << "Cigar: " << cigar << "\n";
+    }
+
+    std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> reference_index;
+    //make_reference_index(reference.front(), reference_index);
+    
+
     
     return 0;
 }
