@@ -13,8 +13,10 @@
 #include <bits/stdc++.h>
 
 
+#include "bioparser/fasta_parser.hpp"
 
 
+using namespace std;
 
 int countDigit(unsigned long int n)
 {
@@ -47,12 +49,7 @@ void longestSubsequence(unsigned long int sequence, int n)
     int maximum = INT_MIN;
 
 
-    int dp[n];
-    memset(dp, 0, sizeof(dp));
-
-    int maximum = INT_MIN;
-
-
+    
     int index = -1;
     for (int i = 0; i < n; i++)
     {
@@ -83,14 +80,15 @@ void longestSubsequence(unsigned long int sequence, int n)
 }
 
 bool cigar_flag;
-int kmer_len = 15;
-int window_len = 5;
+int kmer_len = 10;
+int window_len = 15;
 double minimizer_freq = 0.001;
-int match_cost;
-int mismatch_cost;
-int gap_cost;
+int match_cost = 1;
+int mismatch_cost = - 1;
+int gap_cost = - 1;
 int thread_num = 1;
-AlignmentType type;
+AlignmentType type = GLOBAL;
+int algorithm;
 
 static std::string HELP = "-h or --help for help\n"
                           "-v or --version for version\n"
@@ -101,7 +99,9 @@ static std::string HELP = "-h or --help for help\n"
                           "-c cigar string enabled\n"
                           "-k k-mer length\n"
                           "-w window length\n"
-                          "-f top f frequent minimizers that will not be taken in account\n";
+                          "-f top f frequent minimizers that will not be taken in account\n"
+                          "query name of the file with redings in FASTQ format\n"
+                          "target name of the reference file in FASTA format\n";
 
 class Sequence
 {
@@ -117,6 +117,8 @@ public:
 void make_minimizer_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
+    cout << "usao ovdje, 2\n";
+    cout << sequence->all_data.size() << "\n";
     std::vector<std::tuple<unsigned int, unsigned int, bool>> minimizers = Minimize(sequence->all_data.c_str(),
                                                                                     sequence->all_data.size(), kmer_len, window_len);
     for (auto minimizer : minimizers)
@@ -138,7 +140,9 @@ std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> rem
 void make_reference_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
+    cout << "usao ovdje" << "\n";
     make_minimizer_index(sequence, index);
+    cout << "izisao ovdje\n";
     std::vector<std::pair<unsigned int, unsigned int>> min_occ;
     min_occ.reserve(index.size());
     int num_singl = 0;
@@ -158,8 +162,13 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
     {
         skip = index_size - 1;
     }
-    index = remove_frequent_minimizers(index, skip, min_occ);
+    for (int i = 0; i < skip; i++) {
+        index.erase(min_occ[i].second);
+    }
+    //index = remove_frequent_minimizers(index, skip, min_occ);
 }
+
+
 
 void display_version()
 {
@@ -169,32 +178,14 @@ void display_version()
 
 void display_help()
 {
-    std::cout << HELP << "\n";
+    std::cout << HELP
+              << "\n";
 }
 
 int main(int argc, char *argv[])
 {
     int option;
     const char *optstring = "m:g:n:a:k:w:f:t:hvc";
-=======
-}
-
-void display_version()
-{
-    std::cout << "v0.1.0"
-              << "\n";
-}
-
-void display_help()
-{
-    std::cout << "Help message"
-              << "\n";
-}
-
-int main(int argc, char *argv[])
-{
-    int option;
-    const char *optstring = ":hv";
 
     while ((option = getopt(argc, argv, optstring)) != -1)
     {
@@ -218,7 +209,7 @@ int main(int argc, char *argv[])
             gap_cost = atoi(optarg);
             break;
         case 'a':
-            type = static_cast<AlignmentType>(atoi(optarg));
+            algorithm = atoi(optarg);
             break;
         case 'k':
             kmer_len = atoi(optarg);
@@ -237,15 +228,78 @@ int main(int argc, char *argv[])
             break;
 
         default:
+            std::cout<<HELP;
+                     
             exit(1);
         }
     }
 
     if (optind < argc)
     {
-        std::cout << argv[optind++] << "\n";
-        std::cout << argv[optind] << "\n";
+        std::string path = argv[optind];   
+        
+    }
+	
+	auto ref = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(argv[argc - 2]);
+    auto reference = ref->Parse(-1);
+    int ref_size = (int)reference.size();
+
+    auto frag = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(argv[argc - 1]);
+    auto fragments = frag->Parse(-1);
+    int frag_size = (int)fragments.size();
+    
+    int sum = 0;
+    for (int i = 0; i < frag_size; i++) {
+        sum += fragments[i]->all_data.size();
+    } 
+    float avg_size = sum / frag_size;
+    std::vector<size_t> fragment_vector;
+    for (int i = 0; i < frag_size; i++) {
+        fragment_vector.push_back(fragments[i]->all_data.size());
+    }
+    std::sort(fragment_vector.begin(), fragment_vector.end());
+
+    
+    
+    string cigar;
+    unsigned int target_begin;
+
+    
+    
+    srand(time(NULL));
+    int query_index = rand() % (frag_size);
+    int target_index = rand() % (frag_size);
+
+    //query_index = 0;
+    //target_index = 0;
+
+    switch (algorithm)
+    {
+        case 0:
+            type = GLOBAL;
+            break;
+        case 1:
+            type = LOCAL;
+            break;
+        case 2:
+            type = SEMI_GLOBAL;
+            break;
+        default:
+            break;
+    }
+    //cout << "type: " << type << "\n";
+    int align_score = Align(fragments[query_index]->all_data.c_str(), fragments[query_index]->all_data.size(),
+                                                fragments[target_index]->all_data.c_str(),
+                                                fragments[target_index]->all_data.size(), type, match_cost, mismatch_cost, gap_cost, &cigar, &target_begin);
+    cout << "Alignment score: " << align_score << "\n";
+    if (cigar_flag) {
+        cout << "Cigar: " << cigar << "\n";
     }
 
+    std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> reference_index;
+    make_reference_index(reference.front(), reference_index);
+    
+
+    
     return 0;
 }
