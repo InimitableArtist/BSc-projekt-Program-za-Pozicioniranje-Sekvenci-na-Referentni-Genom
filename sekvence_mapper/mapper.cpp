@@ -117,8 +117,6 @@ public:
 void make_minimizer_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
-    cout << "usao ovdje, 2\n";
-    cout << sequence->all_data.size() << "\n";
     std::vector<std::tuple<unsigned int, unsigned int, bool>> minimizers = Minimize(sequence->all_data.c_str(),
                                                                                     sequence->all_data.size(), kmer_len, window_len);
     for (auto minimizer : minimizers)
@@ -140,9 +138,9 @@ std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> rem
 void make_reference_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
-    cout << "usao ovdje" << "\n";
+    
     make_minimizer_index(sequence, index);
-    cout << "izisao ovdje\n";
+    
     std::vector<std::pair<unsigned int, unsigned int>> min_occ;
     min_occ.reserve(index.size());
     int num_singl = 0;
@@ -167,7 +165,44 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
     }
     //index = remove_frequent_minimizers(index, skip, min_occ);
 }
+bool compare_matches(const tuple<bool, int, unsigned int>& a1, const tuple<bool, int, unsigned int>& a2) {
+    if (get<0>(a1) != get<0>(a2)) {
+        return !get<0>(a1);
+    } else {
+        if (get<1>(a1) != get<1>(a2)) {
+            return get<1>(a1) < get<1>(a2);
+        } else {
+            return get<2>(a1) < get<2>(a2);
+        }
+    }
+}
 
+void best_match_cluster(unordered_map<unsigned int, vector<pair<unsigned int, bool>>>& fragment_index,
+                        unordered_map<unsigned int, vector<pair<unsigned int, bool>>>& reference_index,
+                        vector<tuple<bool, int, unsigned int>>& match_cluster) {
+        
+    vector<tuple<bool, int, unsigned int>> matches;
+    for (auto e : fragment_index) {
+        if (reference_index.count(e.first) != 0) {
+            for (auto location : e.second) {
+                for (auto r_location : reference_index[e.first]) {
+                    bool strand = location.second ^ r_location.second;
+                    int rel_pos;
+                    if (strand) {
+                        rel_pos = location.first + r_location.first;
+                    } else {
+                        rel_pos = location.first - r_location.first;
+                    }
+                    matches.emplace_back(make_tuple(strand, rel_pos, r_location.first));
+                }
+            }
+        }
+    }
+    if (!matches.empty()) {
+        sort(matches.begin(), matches.end(), compare_matches);
+        
+    }
+                        }
 
 
 void display_version()
@@ -298,6 +333,14 @@ int main(int argc, char *argv[])
 
     std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> reference_index;
     make_reference_index(reference.front(), reference_index);
+    
+    string res = "";
+    for (int i = 1; i < 20; i++) {
+        unordered_map<unsigned int, vector<pair<unsigned int, bool>>> fragment_index;
+        make_minimizer_index(fragments[i], fragment_index);
+        vector<tuple<bool, int, unsigned int>> match_cluster;
+        best_match_cluster(fragment_index, reference_index, match_cluster);
+    }
     
 
     
