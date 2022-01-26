@@ -20,64 +20,48 @@ const int EPSILON = 100;
 
 using namespace std;
 
-int countDigit(unsigned long int n)
-{
-    int count = 0;
-    while (n != 0)
-    {
-        n = n / 10;
-        ++count;
+int get_ceil_index(vector<pair<unsigned int, unsigned int>>& matches,
+                    vector<unsigned int>& T, unsigned int l, unsigned int r, pair<unsigned int, unsigned int>key) {
+    while (r - 1 > 1) {
+        int m = l + (r - 1) / 2;
+        if (matches[T[m]].second > key.second) {
+            r = m;
+            continue;
+        }
+        else if (matches[T[m]].second < key.second) {
+            l = m;
+            continue;
+        }
+
+        if (matches[T[m]].first >= key.first) {
+            r = m;
+        } else {
+            l = m
+        }
     }
-    return count;
-}
-void longestSubsequence(unsigned long int sequence, int n)
-{
-    int a[n]; // integer u int[]
-
-    int count = n;
-    while (sequence != 0)
-    {
-        a[count - 1] = sequence % 10;
-        sequence = sequence / 10;
-        count--;
-    }
-
-    unordered_map<int, int> mp;
-
-
-    int dp[n];
-    memset(dp, 0, sizeof(dp));
-
-    int maximum = INT_MIN;
-
-
+    return r;
+                    }
+void longes_increasing_subsequence(vector<pair<unsigned int, unsigned int>>& matches,
+                                    vector<unsigned int)& tail_indices,
+                                    vector<unsigned int>& prev_indices) {   
     
-    int index = -1;
-    for (int i = 0; i < n; i++)
-    {
-
-        if (mp.find(a[i] - 1) != mp.end())
-        {
-
-            int lastIndex = mp[a[i] - 1] - 1;
-
-            dp[i] = 1 + dp[lastIndex];
+    int len = 1;
+    for (int i = 1; i < matches.size(); i++) {
+        if (matches[i].first <matches[tail_indices[0]].first) {
+            tail_indices[0] = i;
         }
-        else
-            dp[i] = 1;
-
-        mp[a[i]] = i + 1;
-
-        if (maximum < dp[i])
-        {
-            maximum = dp[i];
-            index = i;
+        else if (matches[i].first > matches[tail_indices[len - 1]].first) && matches[i].second != matches[prev_indices[tail_indices[len - 1]]].second) {
+            prev_indices[i] = tail_indices[len - 1];
+            tail_indices[len++] = i;
+        }
+        else {
+            int pos = get_ceil_index(matches, tail_indices, -1, len -1, matches[i]);
+            prev_indices[i] = tail_indices[pos - 1],
+            tail_indices[pos] = i;
         }
     }
-
-    for (int curr = a[index] - maximum + 1;
-         curr <= a[index]; curr++)
-        cout << curr << " ";
+    
+    return len;
 
 }
 
