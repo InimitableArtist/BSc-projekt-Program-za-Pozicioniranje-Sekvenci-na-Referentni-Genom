@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cmath>
+#include <stdio.h>
+#include <fstream>
 
 #include "src/alignment.h"
 #include "src/minimizers.h"
@@ -227,6 +229,42 @@ string map_frags_to_ref(const vector<unique_ptr<Sequence>>& fragments,
     string res = "asfsdf";
     return res;           
 
+}
+
+
+void paf_format(ofstream &File, const char* query, unsigned int query_len, 
+const char* target, unsigned int target_len, unsigned int target_origin ,bool origin, const char* cigar){
+    
+    int tr_broj = 0;
+    int ukuZb = 0; 
+    int matchZb = 0;
+    
+    for (char& i : string(cigar)){
+        
+        if (isdigit(i)){
+            tr_broj = (tr_broj* 10) + (int(i)- 48); 
+        }
+        else{
+            ukuZb+= tr_broj;
+            if (i == 'M'){
+                matchZb+=tr_broj;
+            }
+            tr_broj=0;
+        }
+    }
+    
+    File << query << '\t';
+    File << query_len << '\t';
+    File << '\n';
+    File << target << '\t';
+    File << target_len << '\t';
+    File << target_origin << '\t';
+    if (origin == true) File << "+" << '\t';
+    else File << "-" << '\t';
+    File << matchZb << '\t';
+    File << ukuZb << '\t';
+    File << '\n';
+    File << cigar << '\n';
 }
 
 
