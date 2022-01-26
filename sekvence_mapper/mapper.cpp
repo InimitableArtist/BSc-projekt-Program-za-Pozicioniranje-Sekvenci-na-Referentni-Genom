@@ -16,7 +16,7 @@
 #include "bioparser/fasta_parser.hpp"
 #include "thread_pool/thread_pool.hpp"
 
-const int LEN_LIMIT = 5000;
+const int EPSILON = 100;
 
 using namespace std;
 
@@ -215,7 +215,15 @@ void best_match_cluster(unordered_map<unsigned int, vector<pair<unsigned int, bo
     }
     if (!matches.empty()) {
         sort(matches.begin(), matches.end(), compare_matches);
-
+        vector<tuple<bool, int, unsigned int>> current_cluster;
+        int max = 0;
+        current_cluster.emplace_back(matches[0]);
+        for (int i = 1; i <= int(matches.size()); i++) {
+            if (i == int(matches.size()) || get<0>(matches[i]) != get<0>(matches[i - 1]) || get<1>(matches[i]) - get<1>(matches[i - 1]) >= EPSILON) {
+                vector<tuple<bool, int, unsigned int>> list;
+                
+            }
+        }
     }
                         }
 
@@ -232,7 +240,7 @@ string map_frags_to_ref(const vector<unique_ptr<Sequence>>& fragments,
         string paf = "";
         res = paf;
     }             
-
+    string res = "asfsdf";
     return res;           
 
 }
@@ -390,16 +398,14 @@ int main(int argc, char *argv[])
         //res = paf;
     //}
     thread_pool::ThreadPool thread_pool{};
-    vector<std::future<string>> ftrs;
+    vector<std::future<std::string>> ftrs;
     int frag_per_thread = int(fragments.size() / (double)thread_num);
     int frag_begin = 0;
     for (int i = 0; i < (thread_num - 1); i++) {
-        ftrs.emplace_back(thread_pool.Submit(map_frags_to_ref, ref(fragments), ref(reference.front()), ref(reference_index),
-        frag_begin, frag_per_thread));
+        ftrs.emplace_back(thread_pool.Submit(map_frags_to_ref, ref(fragments), ref(reference.front()), ref(reference_index), frag_begin, frag_per_thread));
         frag_begin += frag_per_thread;
     }
-    ftrs.emplace_back(thread_pool.Submit(map_frags_to_ref, ref(fragments), ref(reference.front()), ref(reference_index),
-    frag_begin, int(fragments.size())));
+    ftrs.emplace_back(thread_pool.Submit(map_frags_to_ref, ref(fragments), ref(reference.front()), ref(reference_index), frag_begin, int(fragments.size())));
 
     for (auto& f : ftrs) {
         string final = f.get();
