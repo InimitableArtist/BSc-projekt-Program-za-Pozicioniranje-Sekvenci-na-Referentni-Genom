@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cmath>
+#include <stdio.h>
+#include <fstream>
 
 #include "src/alignment.h"
 #include "src/minimizers.h"
@@ -20,48 +22,57 @@ const int EPSILON = 100;
 
 using namespace std;
 
-int get_ceil_index(vector<pair<unsigned int, unsigned int>>& matches,
-                    vector<unsigned int>& T, unsigned int l, unsigned int r, pair<unsigned int, unsigned int>key) {
-    while (r - 1 > 1) {
-        int m = l + (r - 1) / 2;
-        if (matches[T[m]].second > key.second) {
-            r = m;
-            continue;
-        }
-        else if (matches[T[m]].second < key.second) {
-            l = m;
-            continue;
-        }
-
-        if (matches[T[m]].first >= key.first) {
+int get_ceil_index(vector<tuple<bool, int, unsigned int>>& matches,
+                    vector<int>& T, int l, int r, int k) {
+    
+    while (r - l > 1) {
+        int m = l+ (r - l) / 2;
+        if (get<2>(matches[T[m]]) >= k) {
             r = m;
         } else {
-            l = m
+            l = m;
         }
     }
+
+
     return r;
                     }
-void longes_increasing_subsequence(vector<pair<unsigned int, unsigned int>>& matches,
-                                    vector<unsigned int)& tail_indices,
-                                    vector<unsigned int>& prev_indices) {   
+vector<tuple<bool, int,unsigned int>> longest_increasing_subsequence(vector<tuple<bool, int, unsigned int>>& matches,
+                                    vector<int>& tail_indices,
+                                    vector<int>& prev_indices) {   
     
     int len = 1;
+    
+    vector<tuple<bool, int, unsigned int>> result;
     for (int i = 1; i < matches.size(); i++) {
-        if (matches[i].first <matches[tail_indices[0]].first) {
+        if (get<2>(matches[i]) < get<2>(matches[tail_indices[0]])) {
             tail_indices[0] = i;
         }
-        else if (matches[i].first > matches[tail_indices[len - 1]].first) && matches[i].second != matches[prev_indices[tail_indices[len - 1]]].second) {
+        else if (get<2>(matches[i]) > get<2>(matches[tail_indices[len - 1]])) {
             prev_indices[i] = tail_indices[len - 1];
             tail_indices[len++] = i;
-        }
-        else {
-            int pos = get_ceil_index(matches, tail_indices, -1, len -1, matches[i]);
-            prev_indices[i] = tail_indices[pos - 1],
-            tail_indices[pos] = i;
+        } else {
+            int position = get_ceil_index(matches, tail_indices, -1, len - 1, get<2>(matches[i]));
+            cout << "\nPOZIIICIJA: " << position << "\n";
+            if (position == 0) {
+                prev_indices[i] = -1;
+            } else {
+                prev_indices[i] = tail_indices[position - 1];
+            }
+            tail_indices[position] = i;
         }
     }
+    vector<int> lis_ind;
+    lis_ind.reserve(len);
+    for (int i = tail_indices[len - 1]; i >= 0; i = prev_indices[i]) {
+        lis_ind.emplace_back(i);
+    }
+    reverse(lis_ind.begin(), lis_ind.end());
+    for (auto a : lis_ind) {
+        result.emplace_back(matches[a]);
+    }
     
-    return len;
+    return result;
 
 }
 
@@ -137,7 +148,7 @@ std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> rem
 void make_reference_index(const std::unique_ptr<Sequence> &sequence,
                           std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> &index)
 {
-    
+    cerr << "Making reference index...\n"; 
     make_minimizer_index(sequence, index);
     
     std::vector<std::pair<unsigned int, unsigned int>> min_occ;
@@ -151,6 +162,7 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
         }
         min_occ.emplace_back(std::make_pair(i.second.size(), i.first));
     }
+    cerr << "Sorting minimizers by occurence...\n";
     std::sort(min_occ.begin(), min_occ.end(), std::greater<std::pair<unsigned int, unsigned int>>());
     size_t skip = std::ceil(index.size() * minimizer_freq);
 
@@ -159,6 +171,11 @@ void make_reference_index(const std::unique_ptr<Sequence> &sequence,
     {
         skip = index_size - 1;
     }
+
+    cerr << "Number of distinct minimizers: " << index.size() << "\n";
+    cerr << "Fraction of singletons: " << ((double) num_singl / index.size()) << "\n"; 
+    cerr << "NUmber of occurences of the most frequent minimizers with top " << minimizer_freq * 100 << "% most frequent ignored: " << min_occ[skip].first << "\n";
+
     for (int i = 0; i < skip; i++) {
         index.erase(min_occ[i].second);
     }
@@ -179,6 +196,8 @@ bool compare_matches(const tuple<bool, int, unsigned int>& a1, const tuple<bool,
 void best_match_cluster(unordered_map<unsigned int, vector<pair<unsigned int, bool>>>& fragment_index,
                         unordered_map<unsigned int, vector<pair<unsigned int, bool>>>& reference_index,
                         vector<tuple<bool, int, unsigned int>>& match_cluster) {
+
+    //vector<tuple<bool, unsigned int, int>> result;
         
     vector<tuple<bool, int, unsigned int>> matches;
     for (auto e : fragment_index) {
@@ -197,6 +216,7 @@ void best_match_cluster(unordered_map<unsigned int, vector<pair<unsigned int, bo
             }
         }
     }
+    
     if (!matches.empty()) {
         sort(matches.begin(), matches.end(), compare_matches);
         vector<tuple<bool, int, unsigned int>> current_cluster;
@@ -204,11 +224,18 @@ void best_match_cluster(unordered_map<unsigned int, vector<pair<unsigned int, bo
         current_cluster.emplace_back(matches[0]);
         for (int i = 1; i <= int(matches.size()); i++) {
             if (i == int(matches.size()) || get<0>(matches[i]) != get<0>(matches[i - 1]) || get<1>(matches[i]) - get<1>(matches[i - 1]) >= EPSILON) {
-                vector<tuple<bool, int, unsigned int>> list;
+                vector<int> list_ind;
+                int n = int(current_cluster.size());
+                vector<int> tail_indices(n, 0);
+                vector<int> prev_indices(n, -1);
+                current_cluster = longest_increasing_subsequence(current_cluster, tail_indices, prev_indices);
                 
+                
+
             }
         }
     }
+    
                         }
 
 string map_frags_to_ref(const vector<unique_ptr<Sequence>>& fragments,
@@ -224,9 +251,73 @@ string map_frags_to_ref(const vector<unique_ptr<Sequence>>& fragments,
         string paf = "";
         res = paf;
     }             
-    string res = "asfsdf";
+    
     return res;           
 
+}
+
+
+string paf_format(const unique_ptr<Sequence>& reference, 
+const unique_ptr<Sequence>& fragment, unsigned int target_origin ,bool origin, string* cigar){
+    
+    string result;
+    int tr_broj = 0;
+    int ukuZb = 0; 
+    int matchZb = 0;
+    
+    
+    
+    for (char& i : *cigar){
+        
+        if (isdigit(i)){
+            tr_broj = (tr_broj* 10) + (int(i)- 48); 
+        }
+        else{
+            ukuZb+= tr_broj;
+            if (i == 'M'){
+                matchZb+=tr_broj;
+            }
+            tr_broj=0;
+        }
+    }
+    result = "";
+    
+    result += reference->names.c_str();
+    result += '\t';
+
+    result += to_string(reference->all_data.size());
+    result += '\t';
+    result += '\n';
+    
+    result += fragment->names.c_str();
+    result += '\t';
+    result += to_string(fragment->all_data.size());
+    result += '\t';
+    
+    
+    result += to_string(target_origin);
+    result += '\t';
+    if (origin == true) result += "+";
+    else result += "-";
+    result += '\t';
+    
+
+    result += to_string(matchZb);
+    result += '\t';
+    result += to_string(ukuZb);
+    result += '\t';
+    result += '\n';
+    if (cigar_flag) {
+        result += "cg:Z";
+        result += *cigar;
+    }
+    
+    result += '\n'; 
+    
+
+    //result = "sdfsdf";
+    
+    return result;
 }
 
 
@@ -307,9 +398,38 @@ int main(int argc, char *argv[])
     auto reference = ref->Parse(-1);
     int ref_size = (int)reference.size();
 
+    std::cerr << "Reference genome sequences: \n";
+    for (int i = 0; i < int(reference.size()); i++) {
+        std::cerr << "\t" << reference[i]->names.c_str() << ", length = " << reference[i]->all_data.size() << "\n";
+        cerr << "\n";
+    }
+
     auto frag = bioparser::Parser<Sequence>::Create<bioparser::FastaParser>(argv[argc - 1]);
     vector<unique_ptr<Sequence>> fragments = frag->Parse(-1);
     int frag_size = (int)fragments.size();
+
+    cerr << "Number of fragments: " << fragments.size() << "\n";
+    uint64_t len_sum = 0;
+    vector<size_t> lengths(fragments.size());
+    for (int i = 0; i < int(fragments.size()); i++) {
+        lengths[i] = fragments[i]->all_data.size();
+        len_sum += lengths[i];
+    }
+    sort(lengths.begin(), lengths.end(), greater<size_t>());
+
+    uint64_t N50 = -1, tmp_sum = 0;
+    for (int i = 0; i < int(fragments.size()); i++) {
+        tmp_sum += lengths[i];
+        if (tmp_sum * 2 >= len_sum) {
+            N50 = lengths[i];
+            break;
+        }
+    }
+
+    cerr << "Average length: " << len_sum * 1.0 / fragments.size() << "\n";
+    cerr << "N50 length: " << N50 << "\n";
+    cerr << "Minimal length: " << lengths.back() << "\n";
+    cerr << "Maximal length: " << lengths.front() << "\n";
     
     int sum = 0;
     for (int i = 0; i < frag_size; i++) {
@@ -351,6 +471,11 @@ int main(int argc, char *argv[])
             break;
     }
     //cout << "type: " << type << "\n";
+    cout << "\nAligning two random sequences: \n";
+    cout << "Target sequence:\n";
+    cout << fragments[target_index]->names.c_str() << "\n";
+    cout << "Query sequence: \n";
+    cout << fragments[query_index]->names.c_str() << "\n";
     int align_score;
     if (optimize && type == GLOBAL) {
         align_score = LinearnaSloz(fragments[query_index]->all_data.c_str(), fragments[query_index]->all_data.size(),
@@ -365,22 +490,35 @@ int main(int argc, char *argv[])
     if (cigar_flag) {
         cout << "Cigar: " << cigar << "\n";
     }
+    cout << "Target begin: " << target_begin << "\n";
+
+
+
 
     std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> reference_index;
     make_reference_index(reference.front(), reference_index);
         
     
-    //string res = "";
-    //for (int i = 1; i < 20; i++) {
+    string res = "";
+    for (int i = 1; i < 20; i++) {
 
-        //std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> fragment_index;
+        std::unordered_map<unsigned int, std::vector<std::pair<unsigned int, bool>>> fragment_index;
         //cout << fragments[i]->all_data.size() << "\n";
-        //make_minimizer_index(fragments[i], fragment_index);
-        //vector<tuple<bool, int, unsigned int>> match_cluster;
-        //best_match_cluster(fragment_index, reference_index, match_cluster);
+        make_minimizer_index(fragments[i], fragment_index);
+        vector<tuple<bool, int, unsigned int>> match_cluster;
+        
+        cout << "Mapping fragments: \n";
+        
+        best_match_cluster(fragment_index, reference_index, match_cluster);
+        
+        
+        string res = paf_format(reference.front(), fragments[i], target_begin, true, &cigar);
+        cout << res;
         //string paf = "";
         //res = paf;
-    //}
+    }
+
+    /*
     thread_pool::ThreadPool thread_pool{};
     vector<std::future<std::string>> ftrs;
     int frag_per_thread = int(fragments.size() / (double)thread_num);
@@ -395,7 +533,7 @@ int main(int argc, char *argv[])
         string final = f.get();
         cout << final;
     }
-    
+    */
     
 
     
