@@ -88,7 +88,7 @@ int Align(const char* query, unsigned int query_len,
     int gap,
     std::string* cigar = nullptr,
     unsigned int* target_begin = nullptr) {   
-    
+        
     //Dynamic programming table
     Cell **V = new Cell*[query_len + 1];
     for (unsigned int i = 0; i <= query_len; i++) {
@@ -103,6 +103,7 @@ int Align(const char* query, unsigned int query_len,
 
     //Smith-Waterman
     if (type == LOCAL) {
+        
         int MAX = 0;
         int left, up;
         V[0][0].cost = 0;
